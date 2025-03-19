@@ -4,19 +4,16 @@ from argparse import ArgumentParser
 from aiopath import AsyncPath
 import aioshutil
 
-# Налаштування логування
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
 
 async def create_subfolder_for_extension(output_folder, extension):
-    """Створює підпапку для файлів з певним розширенням."""
     subfolder = output_folder / extension[1:].lower()
     if not await subfolder.exists():
         await subfolder.mkdir(parents=True, exist_ok=True)
     return subfolder
 
 async def copy_file(file_path, output_folder):
-    """Копіює файл у відповідну підпапку асинхронно."""
     try:
         extension = file_path.suffix.lower()
         if extension:
@@ -28,7 +25,6 @@ async def copy_file(file_path, output_folder):
         logger.error(f"Помилка при копіюванні {file_path}: {e}")
 
 async def read_folder(source_folder, output_folder):
-    """Рекурсивно обробляє вміст вихідної папки асинхронно."""
     try:
         async for item in source_folder.iterdir():
             if await item.is_dir():
@@ -39,7 +35,6 @@ async def read_folder(source_folder, output_folder):
         logger.error(f"Помилка при обробці {source_folder}: {e}")
 
 async def main():
-    """Головна функція для запуску сортування файлів."""
     parser = ArgumentParser(description="Сортування файлів по розширенням.")
     parser.add_argument('source', type=str, help="Шлях до вихідної папки")
     parser.add_argument('output', type=str, help="Шлях до цільової папки")
@@ -48,17 +43,14 @@ async def main():
     source_folder = AsyncPath(args.source)
     output_folder = AsyncPath(args.output)
 
-    # Перевірка вихідної папки
     if not await source_folder.exists() or not await source_folder.is_dir():
         logger.error(f"Вихідна папка {source_folder} не існує або не є директорією.")
         return
 
-    # Створення цільової папки, якщо її немає
     if not await output_folder.exists():
         await output_folder.mkdir(parents=True, exist_ok=True)
         logger.info(f"Цільова папка {output_folder} створена.")
 
-    # Запуск обробки
     await read_folder(source_folder, output_folder)
 
 if __name__ == '__main__':
