@@ -1,56 +1,64 @@
 import asyncio
-import shutil
 import logging
-from pathlib import Path
 from argparse import ArgumentParser
+from aiopath import AsyncPath
+import aioshutil
 
+# Налаштування логування
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
 
-def create_subfolder_for_extension(output_folder, extension):
+async def create_subfolder_for_extension(output_folder, extension):
+    """Створює підпапку для файлів з певним розширенням."""
     subfolder = output_folder / extension[1:].lower()
-    if not subfolder.exists():
-        subfolder.mkdir(parents=True, exist_ok=True)
+    if not await subfolder.exists():
+        await subfolder.mkdir(parents=True, exist_ok=True)
     return subfolder
 
 async def copy_file(file_path, output_folder):
+    """Копіює файл у відповідну підпапку асинхронно."""
     try:
         extension = file_path.suffix.lower()
-
         if extension:
-            subfolder = create_subfolder_for_extension(output_folder, extension)
+            subfolder = await create_subfolder_for_extension(output_folder, extension)
             destination = subfolder / file_path.name
-            shutil.copy(file_path, destination)
+            await aioshutil.copy(file_path, destination)
             logger.info(f"Файл {file_path} скопійовано в {destination}")
     except Exception as e:
         logger.error(f"Помилка при копіюванні {file_path}: {e}")
+
 async def read_folder(source_folder, output_folder):
+    """Рекурсивно обробляє вміст вихідної папки асинхронно."""
     try:
-        for item in source_folder.iterdir():
-            if item.is_dir():
+        async for item in source_folder.iterdir():
+            if await item.is_dir():
                 await read_folder(item, output_folder)
-            elif item.is_file():
+            elif await item.is_file():
                 await copy_file(item, output_folder)
     except Exception as e:
         logger.error(f"Помилка при обробці {source_folder}: {e}")
 
 async def main():
+    """Головна функція для запуску сортування файлів."""
     parser = ArgumentParser(description="Сортування файлів по розширенням.")
     parser.add_argument('source', type=str, help="Шлях до вихідної папки")
     parser.add_argument('output', type=str, help="Шлях до цільової папки")
     args = parser.parse_args()
 
-    source_folder = Path(args.source)
-    output_folder = Path(args.output)
+    source_folder = AsyncPath(args.source)
+    output_folder = AsyncPath(args.output)
 
-    if not source_folder.exists() or not source_folder.is_dir():
+    # Перевірка вихідної папки
+    if not await source_folder.exists() or not await source_folder.is_dir():
         logger.error(f"Вихідна папка {source_folder} не існує або не є директорією.")
         return
 
-    if not output_folder.exists():
-        output_folder.mkdir(parents=True, exist_ok=True)
+    # Створення цільової папки, якщо її немає
+    if not await output_folder.exists():
+        await output_folder.mkdir(parents=True, exist_ok=True)
         logger.info(f"Цільова папка {output_folder} створена.")
 
+    # Запуск обробки
     await read_folder(source_folder, output_folder)
 
 if __name__ == '__main__':
